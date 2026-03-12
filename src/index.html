@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>Spiral</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sb-w: 300px;
+  --peek: 10px;
+  --panel: rgba(242,243,250,0.97);
+  --panel-border: rgba(255,255,255,0.8);
+  --card: rgba(255,255,255,0.92);
+  --card-border: rgba(200,202,216,0.55);
+  --hover: rgba(0,0,0,0.05);
+  --active: rgba(0,0,0,0.08);
+  --text: #1c1c1e;
+  --text2: #636366;
+  --textm: #b0b0b8;
+  --accent: #3478f6;
+  --accent-s: rgba(52,120,246,0.12);
+  --sep: rgba(0,0,0,0.07);
+  --shadow: 0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-peek: 3px 0 12px rgba(0,0,0,0.15), 2px 0 4px rgba(0,0,0,0.08);
+  --pin-bg: rgba(255,255,255,0.85);
+  --spin: #3478f6;
+  --tidy: #8e8e93;
+}
+[data-theme="dark"] {
+  --panel: rgba(24,24,36,0.98);
+  --panel-border: rgba(255,255,255,0.07);
+  --card: rgba(36,36,52,0.92);
+  --card-border: rgba(255,255,255,0.09);
+  --hover: rgba(255,255,255,0.06);
+  --active: rgba(255,255,255,0.1);
+  --text: #f0f0f8;
+  --text2: #909098;
+  --textm: #44444e;
+  --accent: #4d9fff;
+  --accent-s: rgba(77,159,255,0.14);
+  --sep: rgba(255,255,255,0.07);
+  --shadow: 0 12px 56px rgba(0,0,0,0.65), 0 2px 12px rgba(0,0,0,0.35);
+  --shadow-peek: 3px 0 16px rgba(0,0,0,0.4), 2px 0 6px rgba(0,0,0,0.25);
+  --pin-bg: rgba(48,48,64,0.85);
+  --spin: #4d9fff;
+  --tidy: #636368;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background: transparent !important;
+  font-family: -apple-system, 'Inter', sans-serif;
+  color: var(--text);
+  -webkit-app-region: no-drag;
+}
+
+#drag {
+  -webkit-app-region: drag;
+  position: fixed; top:0; left:calc(var(--peek) + 4px); right:0; height:44px;
+  z-index: 9000; pointer-events: none;
+}
+#trig {
+  position: fixed; top:0; left:0;
+  width: 20px; height: 100%;
+  z-index: 9999; cursor: default;
+}
+
+/* ── アップデートバー ── */
+#update-bar {
+  display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: #fff; border-radius: 12px;
+  padding: 10px 16px; z-index: 9998;
+  align-items: center; gap: 12px; font-size: 13px; font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+#update-install-btn {
+  display: none; background: rgba(255,255,255,0.2); border: none; color: #fff;
+  border-radius: 8px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+#update-install-btn:hover { background: rgba(255,255,255,0.3); }
+#update-bar-close {
+  background: transparent; border: none; color: rgba(255,255,255,0.7);
+  cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px;
+}
+
+/* ── サイドバー本体 ── */
+#sb {
+  position: fixed; top: 10px;
+  left: calc(-1 * var(--sb-w) + var(--peek));
+  width: var(--sb-w);
+  height: calc(100% - 20px);
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(40px) saturate(2);
+  -webkit-backdrop-filter: blur(40px) saturate(2);
+  box-shadow: var(--shadow-peek);
+  z-index: 8000;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: left 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.3s ease;
+  -webkit-app-region: no-drag;
+}
+#sb.open { left: 10px; box-shadow: var(--shadow); }
+
+/* ── スペース ドット インジケーター ── */
+#space-dots {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 10px 0 6px; flex-shrink: 0;
+}
+.sdot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--card-border); transition: all .25s; cursor: pointer;
+}
+.sdot.on { width: 20px; border-radius: 3px; background: var(--accent); }
+
+/* ── スワイプコンテナ ── */
+#sb-track {
+  flex: 1; display: flex; overflow: hidden; min-height: 0;
+}
+.space-pane {
+  min-width: 100%; width: 100%;
+  display: flex; flex-direction: column;
+  flex-shrink: 0; overflow: hidden;
+  transition: transform 0.38s cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ── アカウントバッジ ── */
+.acct-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px 6px; flex-shrink: 0;
+}
+.acct-avatar {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent-s); border: 1.5px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  overflow: hidden; flex-shrink: 0;
+}
+.acct-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.acct-name { font-size: 12px; font-weight: 500; color: var(--text2); flex:1; }
+.acct-add {
+  width: 22px; height: 22px; border-radius: 7px;
+  background: transparent; border: none; color: var(--textm);
+  cursor: pointer; font-size: 17px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.acct-add:hover { background: var(--hover); color: var(--text); }
+
+/* ── 上部バー ── */
+.topbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 46px 12px 6px; flex-shrink: 0;
+}
+.tb-url {
+  flex: 1;
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 11px; padding: 8px 12px;
+  font-size: 13px; color: var(--text2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: text; user-select: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.ic-btn {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--card-border);
+  color: var(--text2); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .12s; flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.ic-btn:hover { background: var(--hover); color: var(--text); }
+.ic-btn:active { transform: scale(.9); }
+
+/* ── ナビ行 ── */
+.navrow {
+  display: flex; align-items: center; gap: 2px;
+  padding: 0 10px 8px; flex-shrink: 0;
+}
+.nav-btn {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: transparent; border: none;
+  color: var(--text2); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .12s;
+}
+.nav-btn:hover { background: var(--hover); color: var(--text); }
+.nav-btn:active { transform: scale(.88); }
+.nav-btn:disabled { opacity: .28; cursor: default; }
+.nav-sp { flex: 1; }
+
+/* ── URL 入力オーバーレイ ── */
+#url-ov {
+  display: none; position: fixed; inset: 0;
+  z-index: 9990; background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(4px);
+  align-items: flex-start; justify-content: center;
+}
+#url-ov.show { display: flex; }
+.url-box {
+  margin-top: 88px; background: var(--card);
+  border: 1px solid var(--card-border); border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  padding: 8px; width: 500px;
+  display: flex; align-items: center; gap: 8px;
+}
+#url-inp {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-size: 14.5px; font-family: inherit; color: var(--text); padding: 4px 8px;
+}
+#url-inp::placeholder { color: var(--textm); }
+.url-go {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 9px; padding: 7px 16px;
+  font-size: 13px; cursor: pointer; font-family: inherit; font-weight: 500;
+}
+
+/* ── スクロール ── */
+.scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 0 8px 8px; scrollbar-width: none; min-height: 0;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ── ピンアプリ ── */
+.pin-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 6px; padding: 4px 0 12px;
+}
+.pin-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; padding: 6px 2px; border-radius: 12px; transition: background .12s;
+}
+.pin-item:hover { background: var(--hover); }
+.pin-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: var(--pin-bg); border: 1px solid var(--card-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform .12s; overflow: hidden;
+}
+.pin-icon img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+.pin-item:active .pin-icon { transform: scale(.9); }
+.pin-lbl { font-size: 10.5px; color: var(--text2); text-align: center; white-space: nowrap; overflow: hidden; width: 100%; text-overflow: ellipsis; }
+
+/* ── 区切り ── */
+.sep { height: 1px; background: var(--sep); margin: 2px 4px 10px; flex-shrink: 0; }
+.section-lbl { font-size: 12px; font-weight: 500; color: var(--text2); padding: 2px 8px 6px; }
+
+/* ── ブックマーク ── */
+.bm-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px; border-radius: 10px;
+  cursor: pointer; transition: background .12s; margin-bottom: 1px;
+}
+.bm-item:hover { background: var(--hover); }
+.bm-fav { width: 16px; height: 16px; border-radius: 4px; object-fit: contain; flex-shrink: 0; }
+.bm-fav-ph { width: 16px; height: 16px; border-radius: 4px; background: var(--card-border); flex-shrink: 0; }
+.bm-name { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── ブックマーク2（期限付き） ── */
+.bm2-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bm2-expiry { font-size: 10px; color: var(--textm); margin-top: 1px; }
+
+/* ── コンテキストメニュー ── */
+.ctx-menu {
+  position: fixed; z-index: 99999;
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 4px; min-width: 130px;
+}
+.ctx-item {
+  display: block; width: 100%; text-align: left;
+  background: transparent; border: none; border-radius: 7px;
+  padding: 8px 12px; font-size: 13px; color: var(--text);
+  cursor: pointer; font-family: inherit; transition: background .1s;
+}
+.ctx-item:hover { background: var(--hover); }
+
+/* ── Tidy/Clear ── */
+.tidy-row { display: flex; justify-content: flex-end; gap: 2px; padding: 4px 8px 8px; }
+.tidy-btn {
+  background: transparent; border: none;
+  font-size: 12px; color: var(--tidy); cursor: pointer;
+  padding: 4px 10px; border-radius: 7px;
+  display: flex; align-items: center; gap: 4px; transition: background .12s;
+}
+.tidy-btn:hover { background: var(--hover); }
+
+/* ── New Tab ── */
+.new-tab-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 10px;
+  cursor: pointer; color: var(--text2); font-size: 13px;
+  transition: background .12s; margin-bottom: 2px;
+}
+.new-tab-row:hover { background: var(--hover); }
+
+/* ── タブ一覧 ── */
+.tab-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px; border-radius: 10px;
+  cursor: pointer; transition: background .12s; margin-bottom: 1px;
+}
+.tab-item:hover { background: var(--hover); }
+.tab-item.active { background: var(--active); }
+.tab-fav { width: 16px; height: 16px; border-radius: 4px; object-fit: contain; flex-shrink: 0; }
+.tab-fav-ph { width: 16px; height: 16px; border-radius: 4px; background: var(--card-border); flex-shrink: 0; }
+.tab-spin { width: 14px; height: 14px; border: 1.5px solid transparent; border-top-color: var(--spin); border-radius: 50%; animation: sp .65s linear infinite; flex-shrink: 0; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.tab-title { flex: 1; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tab-x {
+  opacity: 0; width: 18px; height: 18px; border-radius: 5px;
+  background: transparent; border: none; color: var(--tidy);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0; transition: all .12s;
+}
+.tab-item:hover .tab-x { opacity: 1; }
+.tab-x:hover { background: rgba(255,59,48,.15); color: #ff3b30; }
+
+/* ── フッター ── */
+.sb-foot {
+  padding: 8px 12px 10px; border-top: 1px solid var(--sep);
+  display: flex; gap: 4px; flex-shrink: 0;
+}
+.ft-btn {
+  flex: 1; background: transparent; border: none; border-radius: 9px;
+  padding: 8px; color: var(--text2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .12s;
+}
+.ft-btn:hover { background: var(--hover); color: var(--text); }
+
+/* ── ブックマーク2 日時設定モーダル ── */
+#bm2-date-modal {
+  display: none; position: fixed; inset: 0; z-index: 9997;
+  background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+#bm2-date-modal.show { display: flex; }
+.bm2-modal-box {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  padding: 24px; width: 320px;
+}
+.bm2-modal-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.bm2-modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+#bm2-date-input {
+  width: 100%; background: var(--hover); border: 1px solid var(--card-border);
+  border-radius: 9px; padding: 9px 12px; font-size: 13px; color: var(--text);
+  font-family: inherit; outline: none; margin-bottom: 14px;
+}
+.bm2-modal-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.bm2-modal-btn {
+  padding: 7px 16px; border-radius: 8px; border: none;
+  font-size: 13px; font-family: inherit; font-weight: 500; cursor: pointer;
+}
+.bm2-modal-btn.cancel { background: var(--hover); color: var(--text2); }
+.bm2-modal-btn.noexp { background: var(--hover); color: var(--text2); }
+.bm2-modal-btn.confirm { background: var(--accent); color: #fff; }
+
+/* ── スペース1ヘッダー ── */
+.space1-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 14px 8px; flex-shrink: 0;
+}
+.space1-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+.space1-add-btn {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: var(--accent); border: none; color: #fff;
+  cursor: pointer; font-size: 18px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .12s;
+}
+.space1-add-btn:hover { opacity: .85; }
+
+/* ── インポートモーダル ── */
+#import-modal {
+  display:none; position:fixed; inset:0; z-index:9995;
+  background:rgba(0,0,0,0.22); backdrop-filter:blur(6px);
+  align-items:center; justify-content:center;
+}
+#import-modal.show { display:flex; }
+.import-box {
+  background:var(--card); border:1px solid var(--card-border);
+  border-radius:18px; box-shadow:0 24px 64px rgba(0,0,0,0.22);
+  padding:28px; width:460px; max-height:80vh; overflow-y:auto;
+}
+.import-title { font-size:17px; font-weight:600; color:var(--text); margin-bottom:6px; }
+.import-sub { font-size:13px; color:var(--text2); margin-bottom:20px; }
+.import-browser-list { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+.import-browser-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:12px;
+  border:1px solid var(--card-border); cursor:pointer;
+  transition:all .15s; background:transparent; width:100%; text-align:left;
+}
+.import-browser-item:hover { background:var(--hover); border-color:var(--accent); }
+.import-browser-item.selected { background:var(--accent-s); border-color:var(--accent); }
+.import-browser-icon { width:36px; height:36px; border-radius:10px; object-fit:contain; }
+.import-browser-name { font-size:14px; font-weight:500; color:var(--text); }
+.import-browser-path { font-size:11px; color:var(--textm); margin-top:1px; }
+.import-actions { display:flex; gap:8px; justify-content:flex-end; }
+.import-btn { padding:8px 18px; border-radius:9px; border:none; font-size:13px; font-family:inherit; font-weight:500; cursor:pointer; }
+.import-btn.cancel { background:var(--hover); color:var(--text2); }
+.import-btn.go { background:var(--accent); color:#fff; }
+.import-btn:disabled { opacity:.4; cursor:default; }
+.import-result { background:var(--hover); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--text2); margin-bottom:16px; display:none; }
+.import-result.show { display:block; }
+.google-signin-btn {
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:11px 16px; border-radius:12px; border:1px solid var(--card-border);
+  background:var(--card); cursor:pointer; font-size:14px; font-weight:500; color:var(--text);
+  margin-bottom:16px; transition:all .15s;
+}
+.google-signin-btn:hover { background:var(--hover); }
+.google-signin-btn img { width:20px; height:20px; }
+.import-divider {
+  display:flex; align-items:center; gap:12px;
+  color:var(--textm); font-size:12px; margin-bottom:16px;
+}
+.import-divider::before, .import-divider::after { content:''; flex:1; height:1px; background:var(--sep); }
+</style>
+</head>
+<body>
+<div id="drag"></div>
+<div id="trig"></div>
+
+<!-- アップデート通知バー -->
+<div id="update-bar">
+  <span class="update-msg">v<span id="update-version"></span> が利用可能です — ダウンロード中...</span>
+  <button id="update-install-btn">再起動してインストール</button>
+  <button id="update-bar-close">✕</button>
+</div>
+
+<!-- URL入力オーバーレイ -->
+<div id="url-ov">
+  <div class="url-box">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="url-inp" type="text" placeholder="検索またはURLを入力..." autocomplete="off" spellcheck="false">
+    <button class="url-go" id="url-go-btn">移動</button>
+  </div>
+</div>
+
+<!-- ブックマーク2 日時設定モーダル -->
+<div id="bm2-date-modal">
+  <div class="bm2-modal-box">
+    <div class="bm2-modal-title">削除日時を設定</div>
+    <div class="bm2-modal-sub">指定した日時にブックマークが自動的に削除されます</div>
+    <input type="datetime-local" id="bm2-date-input">
+    <div class="bm2-modal-actions">
+      <button class="bm2-modal-btn cancel" id="bm2-date-cancel">キャンセル</button>
+      <button class="bm2-modal-btn noexp" id="bm2-date-noexp">期限なし</button>
+      <button class="bm2-modal-btn confirm" id="bm2-date-confirm">設定</button>
+    </div>
+  </div>
+</div>
+
+<!-- サイドバー -->
+<div id="sb">
+
+  <!-- スペース切り替えドット -->
+  <div id="space-dots">
+    <div class="sdot on" data-idx="0"></div>
+    <div class="sdot" data-idx="1"></div>
+  </div>
+
+  <!-- スワイプトラック -->
+  <div id="sb-track">
+
+    <!-- ═══ スペース 0: メイン ═══ -->
+    <div class="space-pane" id="pane-0">
+      <!-- アカウントバッジ -->
+      <div class="acct-bar" id="acct-bar-0">
+        <div class="acct-avatar" id="acct-avatar-0">S</div>
+        <!-- メインの文字を少し下げる -->
+        <div class="acct-name" id="acct-name-0" style="margin-top:3px">メイン</div>
+      </div>
+
+      <!-- アドレスバー -->
+      <div class="topbar">
+        <div class="tb-url" id="tb-url">google.com</div>
+        <button class="ic-btn" id="tb-copy" title="URLをコピー">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+      </div>
+
+      <!-- ナビゲーション -->
+      <div class="navrow">
+        <button class="nav-btn" id="nb-back"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <button class="nav-btn" id="nb-fwd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+        <button class="nav-btn" id="nb-reload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>
+        <div class="nav-sp"></div>
+        <button class="nav-btn" id="nb-theme">
+          <svg id="ico-m" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+        </button>
+      </div>
+
+      <!-- スクロールエリア -->
+      <div class="scroll">
+        <div class="pin-grid" id="pin-grid"></div>
+        <div class="sep"></div>
+        <div class="section-lbl">スペース</div>
+        <div id="bm-list"></div>
+        <div class="tidy-row">
+          <button class="tidy-btn" id="tidy-btn">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Tidy
+          </button>
+          <button class="tidy-btn" id="clear-btn">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Clear
+          </button>
+        </div>
+        <div class="sep"></div>
+        <div class="new-tab-row" id="new-tab-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Tab
+        </div>
+        <div id="tabs-list"></div>
+      </div>
+
+      <!-- フッター -->
+      <div class="sb-foot">
+        <button class="ft-btn" title="履歴"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+        <button class="ft-btn" title="ダウンロード"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button class="ft-btn" id="tb-bm-add" title="ブックマーク追加"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+        <button class="ft-btn" id="btn-settings" title="設定"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      </div>
+    </div><!-- /pane-0 -->
+
+    <!-- ═══ スペース 1: ブックマーク2（期限付き） ═══ -->
+    <div class="space-pane" id="pane-1">
+      <!-- ヘッダー -->
+      <div class="space1-header">
+        <div class="space1-title">📌 一時ブックマーク</div>
+        <button class="space1-add-btn" id="bm2-add-btn" title="現在のページを追加">+</button>
+      </div>
+
+      <div class="scroll">
+        <div class="section-lbl" style="padding-top:4px;color:var(--textm);font-size:11px">右クリックで削除・期限変更</div>
+        <div id="bm2-list"></div>
+      </div>
+    </div><!-- /pane-1 -->
+
+  </div><!-- /sb-track -->
+</div><!-- /sb -->
+
+<!-- インポートモーダル -->
+<div id="import-modal">
+  <div class="import-box">
+    <div class="import-title">ブラウザデータを引き継ぐ</div>
+    <div class="import-sub">ブックマークを他のブラウザからインポートします</div>
+    <button class="google-signin-btn" id="google-signin-btn">
+      <img src="https://www.google.com/favicon.ico" alt="Google">
+      Googleアカウントでサインイン
+    </button>
+    <div class="import-divider">またはブラウザから直接インポート</div>
+    <div class="import-browser-list" id="import-browser-list">
+      <div style="color:var(--textm);font-size:13px;padding:8px">検出中...</div>
+    </div>
+    <div class="import-result" id="import-result"></div>
+    <div class="import-actions">
+      <button class="import-btn cancel" id="import-cancel">キャンセル</button>
+      <button class="import-btn go" id="import-go" disabled>インポート</button>
+    </div>
+  </div>
+</div>
+
+<script src="browser.js"></script>
+</body>
+</html>
