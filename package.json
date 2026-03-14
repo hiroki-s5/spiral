@@ -1,0 +1,72 @@
+{
+  "name": "spiral",
+  "version": "9.0.4",
+  "description": "Spiral - 軽くて速いブラウザ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "electron . --inspect"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7",
+    "electron-log": "^5.0.0",
+    "adm-zip": "^0.5.10",
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "electron": "^37.6.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.spiral.browser",
+    "productName": "Spiral",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Arceus-S5",
+        "repo": "spiral"
+      }
+    ],
+    "mac": {
+      "icon": "assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Spiral needs access to Apple Events.",
+        "LSMinimumSystemVersion": "12.0.0"
+      }
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
+    "afterSign": "./after-sign.js"
+  },
+  "author": "Arceus-S5",
+  "license": "MIT"
+}
