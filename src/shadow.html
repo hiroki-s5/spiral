@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; pointer-events: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; pointer-events: none; background: transparent; }
+canvas { position: fixed; top: 0; left: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const { ipcRenderer } = require('electron');
+
+const M = 20;
+const R = 12;
+let isDark = false;
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y,     x + w, y + r,     r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x,     y + h, x,     y + h - r, r);
+  ctx.lineTo(x,     y + r);
+  ctx.arcTo(x,     y,     x + r, y,         r);
+  ctx.closePath();
+}
+
+function draw() {
+  const c = document.getElementById('c');
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  c.width  = W;
+  c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const bg = isDark ? '#1e1e1e' : '#ffffff';
+  const x = M, y = M, w = W - M * 2, h = H - M * 2;
+
+  // evenodd: 全画面を塗って内側の角丸を穴として抜く → MARGIN帯だけ塗られる
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);        // 外側（時計回り）
+  roundRectPath(ctx, x, y, w, h, R); // 内側（反時計回り扱い）
+  ctx.fill('evenodd');
+
+  // 枠線
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = 1;
+  roundRectPath(ctx, x, y, w, h, R);
+  ctx.stroke();
+}
+
+ipcRenderer.on('theme:changed', (e, dark) => {
+  isDark = dark;
+  draw();
+});
+
+window.addEventListener('resize', draw);
+draw();
+</script>
+</body>
+</html>
