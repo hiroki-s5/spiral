@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  -webkit-app-region: no-drag;
+}
+#bar {
+  width:100%; height:100%;
+  display:flex; align-items:center; gap:2px;
+  padding: 0 8px 0 90px;
+  background: rgba(242,242,247,0.95);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  -webkit-app-region: drag;
+}
+.nav-btn {
+  width:28px; height:28px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; background:transparent; border-radius:6px;
+  cursor:pointer; color:#3c3c3e; flex-shrink:0;
+  transition: background 0.1s;
+  -webkit-app-region: no-drag;
+}
+.nav-btn:hover:not(:disabled) { background: rgba(0,0,0,0.07); }
+.nav-btn:disabled { color:#c7c7cc; cursor:default; }
+#url-wrap {
+  flex:1; height:26px; min-width:0;
+  display:flex; align-items:center;
+  background: rgba(255,255,255,0.8);
+  border-radius:7px;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 0 8px; gap:5px;
+  -webkit-app-region: no-drag;
+  cursor: text;
+}
+#url-wrap svg { flex-shrink:0; opacity:0.45; }
+#url-input {
+  flex:1; border:none; background:transparent; outline:none;
+  font-size:12px; color:#1c1c1e; font-family:inherit; min-width:0;
+}
+#url-input::placeholder { color:#8e8e93; }
+
+/* ダークモード */
+@media (prefers-color-scheme: dark) {
+  #bar { background: rgba(30,30,30,0.95); border-bottom-color: rgba(255,255,255,0.1); }
+  .nav-btn { color:#ebebf5; }
+  .nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+  .nav-btn:disabled { color:#48484a; }
+  #url-wrap { background: rgba(58,58,60,0.9); border-color: rgba(255,255,255,0.1); }
+  #url-input { color:#f2f2f7; }
+}
+</style>
+</head>
+<body>
+<div id="bar">
+  <!-- 戻る -->
+  <button class="nav-btn" id="btn-back" title="戻る">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  </button>
+  <!-- 進む -->
+  <button class="nav-btn" id="btn-forward" title="進む">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </button>
+  <!-- 更新 -->
+  <button class="nav-btn" id="btn-reload" title="更新">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/>
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+  </button>
+
+  <!-- アドレスバー -->
+  <div id="url-wrap">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    <input id="url-input" type="text" placeholder="検索またはURLを入力" spellcheck="false" autocomplete="off"/>
+  </div>
+
+</div>
+
+<script>
+const btnBack    = document.getElementById('btn-back');
+const btnForward = document.getElementById('btn-forward');
+const btnReload  = document.getElementById('btn-reload');
+const urlInput   = document.getElementById('url-input');
+
+// ナビゲーション
+btnBack.addEventListener('click',    () => window.barBridge.goBack());
+btnForward.addEventListener('click', () => window.barBridge.goForward());
+btnReload.addEventListener('click',  () => window.barBridge.reload());
+
+urlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { window.barBridge.navigate(urlInput.value); urlInput.blur(); }
+  if (e.key === 'Escape') urlInput.blur();
+});
+urlInput.addEventListener('focus', () => urlInput.select());
+
+window.barBridge.onUrlChanged((url) => {
+  if (document.activeElement !== urlInput) urlInput.value = url;
+});
+</script>
+</body>
+</html>
