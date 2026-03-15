@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #1e1e1e; --panel: #252525; --border: rgba(255,255,255,0.08);
+  --text: #e8e8e8; --text2: #888; --accent: #3478f6; --card: #2c2c2c; --hover: rgba(255,255,255,0.06);
+}
+html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; color: var(--text); font-size: 13px; -webkit-font-smoothing: antialiased; user-select: none; }
+#root { height: 100%; display: flex; flex-direction: column; }
+
+/* ヘッダー */
+#header { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--panel); flex-shrink: 0; gap: 8px; }
+#drag-area { flex: 1; -webkit-app-region: drag; height: 100%; display: flex; align-items: center; gap: 8px; cursor: default; }
+#drag-area h1 { font-size: 13px; font-weight: 700; color: var(--text); pointer-events: none; }
+#drag-area span { font-size: 10px; font-weight: 400; color: var(--text2); pointer-events: none; }
+#close-btn { width: 22px; height: 22px; background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; flex-shrink: 0; -webkit-app-region: no-drag; }
+#close-btn:hover { background: rgba(255,59,48,0.7); color: #fff; }
+
+/* ツールバー */
+#toolbar { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.mode-btn { flex: 1; padding: 5px 2px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); color: var(--text2); font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.1s; }
+.mode-btn:hover { background: var(--hover); color: var(--text); }
+.mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* 質問 */
+#ask-row { display: none; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+#ask-input { flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12px; outline: none; font-family: inherit; user-select: text; }
+#ask-btn { padding: 7px 12px; border-radius: 7px; border: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+/* 自動入力バー */
+#autofill-bar { display: none; align-items: center; justify-content: space-between; padding: 7px 12px; border-bottom: 1px solid var(--border); background: rgba(52,120,246,0.08); flex-shrink: 0; gap: 8px; }
+#autofill-bar.show { display: flex; }
+#autofill-status { font-size: 11px; color: var(--text2); flex: 1; }
+#autofill-btn { padding: 5px 12px; border-radius: 6px; border: none; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+#autofill-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* 結果 */
+#result-area { flex: 1; overflow-y: auto; padding: 14px; }
+#placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text2); font-size: 12px; text-align: center; line-height: 1.7; }
+#result-content { display: none; font-size: 12.5px; line-height: 1.75; color: var(--text); }
+#result-content h1,#result-content h2,#result-content h3 { font-size: 13px; font-weight: 700; margin: 12px 0 5px; }
+#result-content p { margin: 6px 0; }
+#result-content ul,#result-content ol { margin: 6px 0; padding-left: 18px; }
+#result-content li { margin: 3px 0; }
+#result-content code { background: var(--card); padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 11.5px; }
+#result-content pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; overflow-x: auto; margin: 8px 0; }
+#result-content pre code { background: transparent; padding: 0; }
+#result-content strong { font-weight: 700; }
+#result-content em { font-style: italic; }
+#result-content blockquote { border-left: 3px solid var(--accent); margin: 8px 0; padding: 4px 10px; color: var(--text2); }
+
+/* フッター */
+#footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--panel); }
+#status { font-size: 11px; color: var(--text2); }
+#run-btn { padding: 6px 16px; border-radius: 7px; border: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+#run-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* ローディング */
+.loading { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 12px; padding: 24px 0; }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* キーバー */
+#key-bar { display: none; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: rgba(255,200,0,0.06); }
+#key-bar.show { display: flex; }
+#key-input { flex: 1; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12px; outline: none; font-family: monospace; user-select: text; }
+#key-save { padding: 6px 12px; border-radius: 7px; border: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+/* スクロールバー */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="header">
+    <div id="drag-area">
+      <h1>Spiral AI</h1>
+      <span>Groq / Llama 3.3</span>
+    </div>
+    <button id="close-btn">×</button>
+  </div>
+
+  <div id="key-bar">
+    <input id="key-input" type="password" placeholder="Groq APIキー (gsk_...)">
+    <button id="key-save">保存</button>
+  </div>
+
+  <div id="toolbar">
+    <button class="mode-btn active" data-mode="auto">自動解析</button>
+    <button class="mode-btn" data-mode="summary">要約</button>
+    <button class="mode-btn" data-mode="solve">問題を解く</button>
+    <button class="mode-btn" data-mode="ask">質問</button>
+  </div>
+
+  <div id="ask-row">
+    <input id="ask-input" type="text" placeholder="このページについて質問..." autocomplete="off">
+    <button id="ask-btn">送信</button>
+  </div>
+
+  <div id="autofill-bar">
+    <span id="autofill-status"></span>
+    <button id="autofill-btn">解答欄に自動入力</button>
+  </div>
+
+  <div id="result-area">
+    <div id="placeholder"><span>ページを開いて<br>「実行」を押してください</span></div>
+    <div id="result-content"></div>
+  </div>
+
+  <div id="footer">
+    <span id="status"></span>
+    <button id="run-btn">実行</button>
+  </div>
+</div>
+
+<script>
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const STORAGE_KEY = 'spiral-ai-groq-key';
+
+function getApiKey() {
+  try { return localStorage.getItem(STORAGE_KEY) || ''; } catch { return ''; }
+}
+
+async function initKey() {
+  let key = getApiKey();
+  if (!key) {
+    // メインプロセス（ai-key.json または .env）から取得
+    key = await window.aiAPI.getApiKey();
+    if (key) { try { localStorage.setItem(STORAGE_KEY, key); } catch {} }
+  }
+  if (!key) {
+    // キー未設定 → 入力UIを表示
+    document.getElementById('key-bar').classList.add('show');
+  }
+}
+initKey();
+let currentMode = 'auto';
+let _lastAnswers = [];
+
+async function groqCall(userPrompt, systemPrompt) {
+  const messages = [];
+  if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+  messages.push({ role: 'user', content: userPrompt });
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getApiKey() },
+    body: JSON.stringify({ model: GROQ_MODEL, messages, max_tokens: 2048, temperature: 0.5 }),
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || 'HTTP '+res.status); }
+  const data = await res.json();
+  return data?.choices?.[0]?.message?.content || '';
+}
+
+function renderMarkdown(md) {
+  let h = md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```[\w]*\n?([\s\S]*?)```/g, (_,c)=>'<pre><code>'+c.trim()+'</code></pre>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^---+$/gm,'<hr>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g,s=>'<ul>'+s+'</ul>')
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+  return '<p>'+h+'</p>';
+}
+
+async function run() {
+  const runBtn      = document.getElementById('run-btn');
+  const statusEl    = document.getElementById('status');
+  const resultEl    = document.getElementById('result-content');
+  const placeholder = document.getElementById('placeholder');
+  runBtn.disabled = true;
+  statusEl.textContent = '取得中...';
+  placeholder.style.display = 'none';
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div><span>AI処理中...</span></div>';
+  document.getElementById('autofill-bar').classList.remove('show');
+  try {
+    const [pageText, pageInfo] = await Promise.all([window.aiAPI.getPageText(), window.aiAPI.getPageInfo()]);
+    const { url, title } = pageInfo;
+    const text = pageText || '（ページ内容を取得できませんでした）';
+    const ctx = 'タイトル: '+title+'\nURL: '+url+'\n\nページ内容:\n'+text.slice(0,4000);
+    const sys = 'あなたは優秀なアシスタントです。Markdownで日本語で回答してください。';
+    let prompt = '';
+    if (currentMode === 'auto')    prompt = ctx+'\n\n---\n数学・物理・プログラミングの問題があれば解いてください。それ以外は200〜400文字で要約し重要ポイントを箇条書きに。';
+    else if (currentMode === 'summary') prompt = ctx+'\n\n---\n1〜2文で概要、重要ポイントを箇条書きで5つ以内にまとめてください。';
+    else if (currentMode === 'solve')   prompt = ctx+'\n\n---\nこのページの問題・演習をすべて解いてください。問題番号を明記し解法と答えを示してください。';
+    else if (currentMode === 'ask') {
+      const q = document.getElementById('ask-input').value.trim();
+      if (!q) { statusEl.textContent='質問を入力してください'; resultEl.innerHTML=''; placeholder.style.display='flex'; runBtn.disabled=false; return; }
+      prompt = ctx+'\n\n---\n質問: '+q+'\n上記を参考に答えてください。';
+    }
+    const answer = await groqCall(prompt, sys);
+    resultEl.innerHTML = renderMarkdown(answer);
+    const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    statusEl.textContent = '完了 '+t;
+    if (currentMode === 'auto' || currentMode === 'solve') {
+      checkAutofill(answer, text);
+    }
+  } catch(err) {
+    resultEl.innerHTML = '<div style="color:#f44336;font-size:12px;">エラー: '+err.message+'</div>';
+    statusEl.textContent = '';
+  }
+  runBtn.disabled = false;
+}
+
+async function checkAutofill(answer, pageText) {
+  const bar = document.getElementById('autofill-bar');
+  const barStatus = document.getElementById('autofill-status');
+  const barBtn = document.getElementById('autofill-btn');
+  const fields = await window.aiAPI.getInputFields();
+  if (!fields || fields.length === 0) return;
+  barStatus.textContent = fields.length+'個の解答欄を検出中...';
+  bar.classList.add('show');
+  barBtn.disabled = true;
+  try {
+    const fieldsDesc = fields.map((f,i)=>'欄'+(i+1)+': '+(f.label||f.context.slice(0,80)||'不明')).join('\n');
+    const raw = await groqCall(
+      'ページ内容:\n'+pageText.slice(0,2000)+'\n\nAIの解答:\n'+answer.slice(0,1500)+'\n\n解答欄:\n'+fieldsDesc+'\n\n以下のJSON形式のみで返してください:\n[{"index":0,"value":"答え"}]',
+      'JSONのみ返してください。コードブロック不要。'
+    );
+    const cleaned = raw.trim().replace(/^```json?\n?/,'').replace(/```$/,'').trim();
+    _lastAnswers = JSON.parse(cleaned);
+    if (_lastAnswers.length > 0) { barStatus.textContent=_lastAnswers.length+'個の解答欄に入力できます'; barBtn.disabled=false; }
+    else { barStatus.textContent='入力できる解答欄が見つかりませんでした'; }
+  } catch { barStatus.textContent='解答欄の解析に失敗しました'; }
+}
+
+document.getElementById('close-btn').addEventListener('click', () => window.aiAPI.close());
+
+document.getElementById('key-save').addEventListener('click', async () => {
+  const k = document.getElementById('key-input').value.trim();
+  if (!k) return;
+  try { localStorage.setItem(STORAGE_KEY, k); } catch {}
+  await window.aiAPI.setApiKey(k);
+  document.getElementById('key-bar').classList.remove('show');
+});
+document.getElementById('run-btn').addEventListener('click', run);
+document.getElementById('ask-btn').addEventListener('click', run);
+document.getElementById('ask-input').addEventListener('keydown', e => { if(e.key==='Enter') run(); });
+document.getElementById('autofill-btn').addEventListener('click', async () => {
+  const barBtn = document.getElementById('autofill-btn');
+  const barStatus = document.getElementById('autofill-status');
+  barBtn.disabled = true;
+  barStatus.textContent = '入力中...';
+  const ok = await window.aiAPI.fillAnswers(_lastAnswers);
+  barStatus.textContent = ok ? _lastAnswers.length+'個の解答欄に入力しました' : '入力に失敗しました';
+  if (!ok) barBtn.disabled = false;
+});
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    document.getElementById('ask-row').style.display = currentMode==='ask' ? 'flex' : 'none';
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+canvas { position: fixed; top: 0; left: 0; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const { ipcRenderer } = require('electron');
+const params = new URLSearchParams(location.search);
+const pos = params.get('pos') || 'tl';
+const R = 12;   // 角丸半径（shadow.htmlと同じ）
+const S = 20;   // MARGIN（cornerViewのサイズ）
+let isDark = false;
+
+function draw() {
+  const c = document.getElementById('c');
+  c.width  = S;
+  c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, S, S);
+
+  const bg = isDark ? '#1e1e1e' : '#ffffff';
+  ctx.fillStyle = bg;
+
+  ctx.beginPath();
+  if (pos === 'tl') {
+    ctx.moveTo(0, 0);
+    ctx.lineTo(R, 0);
+    ctx.arcTo(0, 0, 0, R, R);
+    ctx.closePath();
+  } else if (pos === 'tr') {
+    ctx.moveTo(S, 0);
+    ctx.lineTo(S - R, 0);
+    ctx.arcTo(S, 0, S, R, R);
+    ctx.closePath();
+  } else if (pos === 'bl') {
+    ctx.moveTo(0, S);
+    ctx.lineTo(R, S);
+    ctx.arcTo(0, S, 0, S - R, R);
+    ctx.closePath();
+  } else if (pos === 'br') {
+    ctx.moveTo(S, S);
+    ctx.lineTo(S - R, S);
+    ctx.arcTo(S, S, S, S - R, R);
+    ctx.closePath();
+  }
+  ctx.fill();
+}
+
+ipcRenderer.on('theme:changed', (e, dark) => {
+  isDark = dark;
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>
