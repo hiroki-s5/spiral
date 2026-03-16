@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #1e1e1e; --panel: #252525; --border: rgba(255,255,255,0.08);
+  --text: #e8e8e8; --text2: #888; --accent: #3478f6; --card: #2c2c2c;
+  --hover: rgba(255,255,255,0.06); --red: #ff453a;
+}
+html, body {
+  height: 100%; background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: var(--text); font-size: 13px; -webkit-font-smoothing: antialiased;
+  user-select: none; overflow: hidden;
+}
+#root { height: 100%; display: flex; flex-direction: column; }
+#header {
+  display: flex; align-items: center; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); background: var(--panel);
+  flex-shrink: 0; gap: 8px; -webkit-app-region: drag;
+}
+#header-title { flex: 1; font-size: 13px; font-weight: 700; pointer-events: none; display: flex; align-items: center; gap: 6px; }
+#header-title span { font-size: 10px; font-weight: 400; color: var(--accent); }
+#close-btn {
+  width: 22px; height: 22px; background: rgba(255,255,255,0.08); border: none;
+  border-radius: 6px; color: var(--text2); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s; flex-shrink: 0; -webkit-app-region: no-drag;
+}
+#close-btn:hover { background: rgba(255,59,48,0.7); color: #fff; }
+#page-info { padding: 8px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+#page-title { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+#page-url { font-size: 10px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#actions { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.action-btn {
+  flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text2); font-size: 11px; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: all 0.1s; -webkit-app-region: no-drag;
+}
+.action-btn:hover { background: var(--hover); color: var(--text); }
+.action-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+#content { flex: 1; overflow-y: auto; padding: 14px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+#content::-webkit-scrollbar { width: 4px; }
+#content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+#placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 10px; color: var(--text2); text-align: center; }
+#placeholder .icon { font-size: 32px; opacity: 0.3; }
+#placeholder p { font-size: 12px; line-height: 1.6; max-width: 200px; }
+#loading { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--text2); }
+.spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-label { font-size: 12px; }
+.section-label { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+.summary-section { margin-bottom: 18px; }
+.summary-text { font-size: 13px; line-height: 1.7; color: var(--text); user-select: text; }
+.verdict-text { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.4; user-select: text; }
+.bullet-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.bullet-list li { font-size: 12px; line-height: 1.6; color: var(--text); padding-left: 14px; position: relative; user-select: text; }
+.bullet-list li::before { content: "•"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+.related-card { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); margin-bottom: 8px; cursor: pointer; transition: background 0.1s; -webkit-app-region: no-drag; }
+.related-card:hover { background: var(--hover); border-color: rgba(255,255,255,0.15); }
+.related-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; line-height: 1.4; }
+.related-url { font-size: 10px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.related-snippet { font-size: 11px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+#error-area { display: none; padding: 14px; border-radius: 10px; background: rgba(255,69,58,0.1); border: 1px solid rgba(255,69,58,0.2); }
+#error-text { font-size: 12px; color: var(--red); line-height: 1.6; user-select: text; }
+#no-key-area { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; padding: 20px; text-align: center; }
+#no-key-area p { font-size: 12px; color: var(--text2); line-height: 1.6; }
+#no-key-link { padding: 8px 16px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; -webkit-app-region: no-drag; }
+#copy-btn { display: none; width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 14px; transition: all 0.1s; -webkit-app-region: no-drag; }
+#copy-btn:hover { background: var(--hover); color: var(--text); }
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="header">
+    <div id="header-title">Spiral AI <span>要約</span></div>
+    <button id="close-btn">&#x2715;</button>
+  </div>
+  <div id="page-info">
+    <div id="page-title">ページを開いてください</div>
+    <div id="page-url">—</div>
+  </div>
+  <div id="actions">
+    <button class="action-btn active" id="btn-summarize" onclick="runSummarize()">要約する</button>
+    <button class="action-btn" id="btn-related" onclick="runRelated()">関連記事</button>
+    <button class="action-btn" id="btn-keywords" onclick="runKeywords()">キーワード</button>
+  </div>
+  <div id="content">
+    <div id="placeholder">
+      <div class="icon">&#x2726;</div>
+      <p>「要約する」を押すと現在開いているページを要約します</p>
+    </div>
+    <div id="loading"><div class="spinner"></div><div id="loading-label">解析中...</div></div>
+    <div id="no-key-area">
+      <p>Groq APIキーが設定されていません。<br>.envファイルに GROQ_API_KEY を設定してください。</p>
+      <button id="no-key-link" onclick="window.aiAPI.openUrl('https://console.groq.com/keys')">Groqキーを取得する</button>
+    </div>
+    <div id="error-area"><div id="error-text"></div></div>
+    <div id="summary-area" style="display:none;"></div>
+    <div id="related-area" style="display:none;"></div>
+    <button id="copy-btn" onclick="copyResult()">結果をコピー</button>
+  </div>
+</div>
+<script>
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_FAST  = 'llama-3.1-8b-instant';
+let currentUrl = '', currentTitle = '', lastResult = '';
+
+window.aiAPI.onPageContext(ctx => {
+  currentUrl   = ctx.url   || '';
+  currentTitle = ctx.title || '';
+  document.getElementById('page-title').textContent = currentTitle || '(タイトルなし)';
+  document.getElementById('page-url').textContent   = currentUrl  || '—';
+});
+document.getElementById('close-btn').onclick = () => window.aiAPI.close();
+
+async function groqCall(messages, maxTokens, fast) {
+  const key = await window.aiAPI.getApiKey();
+  if (!key) { showNoKey(); return null; }
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({ model: fast ? GROQ_FAST : GROQ_MODEL, messages, max_tokens: maxTokens || 800, temperature: 0.3 }),
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || 'HTTP ' + res.status); }
+  return (await res.json())?.choices?.[0]?.message?.content || '';
+}
+
+async function getPageText() {
+  try { return (await window.aiAPI.getPageText() || '').slice(0, 8000); } catch { return ''; }
+}
+
+function setState(state) {
+  ['placeholder','loading','no-key-area','error-area','summary-area','related-area'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById('copy-btn').style.display = 'none';
+  if (state) {
+    const el = document.getElementById(state);
+    if (!el) return;
+    el.style.display = (state === 'loading' || state === 'no-key-area') ? 'flex' : 'block';
+  }
+}
+function setLoading(l) { setState('loading'); document.getElementById('loading-label').textContent = l || '解析中...'; }
+function showNoKey() { setState('no-key-area'); }
+function showError(m) { setState('error-area'); document.getElementById('error-text').textContent = m; }
+function setBtn(id) { document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active')); document.getElementById(id)?.classList.add('active'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function runSummarize() {
+  setBtn('btn-summarize');
+  setLoading('要約中...');
+  try {
+    const text = await getPageText();
+    if (!text) { showError('ページの本文を取得できませんでした。'); return; }
+    const raw = await groqCall([
+      { role: 'system', content: 'WebページをJSON形式で要約するアシスタントです。必ずJSONのみで回答してください。' },
+      { role: 'user', content: `以下のWebページを日本語で要約してください。\nタイトル: ${currentTitle}\nURL: ${currentUrl}\n\n${text}\n\n---\nJSONで回答:\n{"verdict":"一言（20文字以内）","overview":"2〜3文の概要","points":["ポイント1","ポイント2","ポイント3","ポイント4","ポイント5"]}` }
+    ], 1000);
+    if (!raw) return;
+    let p;
+    try { p = JSON.parse(raw.replace(/```json\n?|\n?```/g,'').trim()); }
+    catch { p = { overview: raw, points: [], verdict: '' }; }
+    lastResult = (p.verdict ? '【一言】\n' + p.verdict + '\n\n' : '') + '【概要】\n' + p.overview + '\n\n【ポイント】\n' + (p.points||[]).map((x,i)=>`${i+1}. ${x}`).join('\n');
+    const area = document.getElementById('summary-area');
+    area.innerHTML = '';
+    if (p.verdict) area.innerHTML += `<div class="summary-section"><div class="section-label">一言で言うと</div><div class="verdict-text">${esc(p.verdict)}</div></div>`;
+    if (p.overview) area.innerHTML += `<div class="summary-section"><div class="section-label">概要</div><div class="summary-text">${esc(p.overview)}</div></div>`;
+    if (p.points?.length) area.innerHTML += `<div class="summary-section"><div class="section-label">重要ポイント</div><ul class="bullet-list">${p.points.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
+    setState('summary-area');
+    document.getElementById('copy-btn').style.display = 'block';
+  } catch(e) { showError('エラー: ' + e.message); }
+}
+
+async function runRelated() {
+  setBtn('btn-related');
+  setLoading('関連記事を検索中...');
+  try {
+    const text = await getPageText();
+    const raw = await groqCall([
+      { role: 'system', content: '検索クエリを生成するアシスタントです。JSONのみで回答。' },
+      { role: 'user', content: `ページ「${currentTitle}」の関連情報を探すための検索クエリを3つ生成。\n${text.slice(0,1000)}\nJSONで: {"queries":["q1","q2","q3"]}` }
+    ], 200, true);
+    let queries = [currentTitle];
+    if (raw) {
+      try { const p = JSON.parse(raw.replace(/```json\n?|\n?```/g,'').trim()); if (p.queries?.length) queries = p.queries.slice(0,3); } catch {}
+    }
+    const results = [];
+    for (const q of queries) {
+      try {
+        const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`);
+        const data = await res.json();
+        (data.RelatedTopics||[]).forEach(item => {
+          if (item.FirstURL && item.Text && !results.find(x=>x.url===item.FirstURL) && item.FirstURL !== currentUrl)
+            results.push({ title: item.Text.split(' - ')[0], url: item.FirstURL, snippet: item.Text });
+          if (item.Topics) item.Topics.forEach(t => {
+            if (t.FirstURL && t.Text && !results.find(x=>x.url===t.FirstURL) && t.FirstURL !== currentUrl)
+              results.push({ title: t.Text.split(' - ')[0], url: t.FirstURL, snippet: t.Text });
+          });
+        });
+        (data.Results||[]).forEach(item => {
+          if (item.FirstURL && !results.find(x=>x.url===item.FirstURL))
+            results.push({ title: item.Text||item.FirstURL, url: item.FirstURL, snippet: '' });
+        });
+      } catch {}
+      if (results.length >= 8) break;
+    }
+    const area = document.getElementById('related-area');
+    area.innerHTML = '';
+    if (!results.length) {
+      area.innerHTML = '<div style="color:var(--text2);font-size:12px;text-align:center;padding:20px 0;">関連記事が見つかりませんでした</div>';
+    } else {
+      area.innerHTML = `<div class="section-label" style="margin-bottom:10px;">関連記事 ${results.length}件</div>`;
+      results.slice(0,8).forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'related-card';
+        card.innerHTML = `<div class="related-title">${esc(item.title)}</div><div class="related-url">${esc(item.url)}</div>${item.snippet?`<div class="related-snippet">${esc(item.snippet)}</div>`:''}`;
+        card.onclick = () => window.aiAPI.openUrl(item.url);
+        area.appendChild(card);
+      });
+      lastResult = results.map(r=>`${r.title}\n${r.url}`).join('\n\n');
+    }
+    setState('related-area');
+    if (results.length) document.getElementById('copy-btn').style.display = 'block';
+  } catch(e) { showError('エラー: ' + e.message); }
+}
+
+async function runKeywords() {
+  setBtn('btn-keywords');
+  setLoading('キーワードを抽出中...');
+  try {
+    const text = await getPageText();
+    if (!text) { showError('ページの本文を取得できませんでした。'); return; }
+    const raw = await groqCall([
+      { role: 'system', content: 'キーワード抽出アシスタント。JSONのみで回答。' },
+      { role: 'user', content: `タイトル: ${currentTitle}\n\n${text.slice(0,4000)}\n\nJSONで: {"keywords":["kw1","kw2",...],"category":"カテゴリ","language":"言語"}` }
+    ], 400, true);
+    if (!raw) return;
+    let p;
+    try { p = JSON.parse(raw.replace(/```json\n?|\n?```/g,'').trim()); } catch { p = { keywords:[], category:'', language:'' }; }
+    const area = document.getElementById('summary-area');
+    area.innerHTML = '';
+    if (p.category||p.language) area.innerHTML += `<div class="summary-section"><div class="section-label">ページ情報</div><div style="display:flex;gap:8px;flex-wrap:wrap;">${p.category?`<span style="padding:3px 10px;border-radius:20px;background:rgba(52,120,246,0.15);color:var(--accent);font-size:11px;font-weight:600;">${esc(p.category)}</span>`:''} ${p.language?`<span style="padding:3px 10px;border-radius:20px;background:var(--card);color:var(--text2);font-size:11px;">${esc(p.language)}</span>`:''}</div></div>`;
+    if (p.keywords?.length) {
+      const tags = p.keywords.map(k=>`<span style="padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;cursor:pointer;display:inline-block;margin:3px 3px 0 0;user-select:text;" onclick="window.aiAPI.openUrl('https://duckduckgo.com/?q='+encodeURIComponent('${k.replace(/'/g,"\\'").replace(/"/g,'\\"')}'))">${esc(k)}</span>`).join('');
+      area.innerHTML += `<div class="summary-section"><div class="section-label">キーワード（クリックで検索）</div><div style="line-height:2;">${tags}</div></div>`;
+    }
+    lastResult = `カテゴリ: ${p.category||''}\nキーワード: ${(p.keywords||[]).join(', ')}`;
+    setState('summary-area');
+    document.getElementById('copy-btn').style.display = 'block';
+  } catch(e) { showError('エラー: ' + e.message); }
+}
+
+function copyResult() {
+  if (!lastResult) return;
+  navigator.clipboard.writeText(lastResult).catch(()=>{});
+  const btn = document.getElementById('copy-btn');
+  btn.textContent = 'コピーしました';
+  setTimeout(() => btn.textContent = '結果をコピー', 1500);
+}
+
+window.aiAPI.getApiKey().then(k => { if (!k) showNoKey(); }).catch(()=>{});
+</script>
+</body>
+</html>
